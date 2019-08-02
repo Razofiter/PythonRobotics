@@ -1,15 +1,3 @@
-"""
-Informed RRT* path planning
-
-author: Karan Chawla
-        Atsushi Sakai(@Atsushi_twi)
-
-Reference: Informed RRT*: Optimal Sampling-based Path Planning Focused via
-Direct Sampling of an Admissible Ellipsoidal Heuristichttps://arxiv.org/pdf/1404.2334.pdf
-
-"""
-
-
 import random
 import numpy as np
 import math
@@ -23,7 +11,7 @@ class InformedRRTStar():
 
     def __init__(self, start, goal,
                  obstacleList, randArea,
-                 expandDis=0.5, goalSampleRate=10, maxIter=200):
+                 expandDis=0.5, goalSampleRate=10, maxIter=100):
 
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
@@ -294,6 +282,29 @@ class InformedRRTStar():
         plt.plot(cx, cy, "xc")
         plt.plot(px, py, "--c")
 
+    def GenerateWaypoint(self, path):
+        print("Succes!")
+        pathLen = 0
+        waypointPath = []
+        for i in range(len(path)-1,0,-1):
+            node1_x = path[i][0]
+            node1_y = path[i][1]
+            node2_x = path[i - 1][0]
+            node2_y = path[i - 1][1]
+            pathLen = math.sqrt((node1_x - node2_x)
+                                 ** 2 + (node1_y - node2_y)**2)
+            theta = math.atan2(node2_y-node1_y, node2_x-node1_x)
+            waypointPath.append([node1_x,node1_y])
+            temp_n = copy.deepcopy(path[i])
+            while(pathLen > self.expandDis):
+                temp_n[0] += self.expandDis* math.cos(theta)
+                temp_n[1] += self.expandDis* math.sin(theta)
+                waypointPath.append([temp_n[0],temp_n[1]])
+                pathLen = pathLen - self.expandDis
+            waypointPath.append([node2_x,node2_y])
+
+        return waypointPath
+
 
 class Node():
 
@@ -321,12 +332,18 @@ def main():
     rrt = InformedRRTStar(start=[0, 0], goal=[5, 10],
                           randArea=[-2, 15], obstacleList=obstacleList)
     path = rrt.InformedRRTStarSearch(animation=show_animation)
+    while path is None:
+        path = rrt.InformedRRTStarSearch(animation=show_animation)
+    waypointPath = rrt.GenerateWaypoint(path)
+    #print([[x,y] for (x, y) in path])
+    #print([[x,y] for (x, y) in waypointPath])
     print("Done!!")
 
     # Plot path
     if show_animation:
         rrt.drawGraph()
-        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        plt.plot([x for (x, y) in path], [y for (x, y) in path], 'sr')
+        plt.plot([x for (x, y) in waypointPath], [y for (x, y) in waypointPath], '^b')
         plt.grid(True)
         plt.pause(0.01)
         plt.show()
