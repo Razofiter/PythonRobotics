@@ -283,8 +283,8 @@ class InformedRRTStar():
         plt.plot(px, py, "--c")
 
     def GenerateWaypoint(self, path):
-        print("Succes!")
         pathLen = 0
+        safeDist = 0.05
         waypointPath = []
         for i in range(len(path)-1,0,-1):
             node1_x = path[i][0]
@@ -296,14 +296,18 @@ class InformedRRTStar():
             theta = math.atan2(node2_y-node1_y, node2_x-node1_x)
             waypointPath.append([node1_x,node1_y])
             temp_n = copy.deepcopy(path[i])
-            while(pathLen > self.expandDis):
-                temp_n[0] += self.expandDis* math.cos(theta)
-                temp_n[1] += self.expandDis* math.sin(theta)
+            while(pathLen > safeDist):
+                temp_n[0] += safeDist* math.cos(theta)
+                temp_n[1] += safeDist* math.sin(theta)
                 waypointPath.append([temp_n[0],temp_n[1]])
-                pathLen = pathLen - self.expandDis
+                pathLen = pathLen - safeDist
             waypointPath.append([node2_x,node2_y])
 
         return waypointPath
+
+    def OptimizeTraj(self, waypointPath):
+        return('OK')
+    
 
 
 class Node():
@@ -335,8 +339,7 @@ def main():
     while path is None:
         path = rrt.InformedRRTStarSearch(animation=show_animation)
     waypointPath = rrt.GenerateWaypoint(path)
-    #print([[x,y] for (x, y) in path])
-    #print([[x,y] for (x, y) in waypointPath])
+    print([x for (x, y) in waypointPath], [y for (x, y) in waypointPath])
     print("Done!!")
 
     # Plot path
@@ -347,6 +350,8 @@ def main():
         plt.grid(True)
         plt.pause(0.01)
         plt.show()
+
+    trajOptim = rrt.OptimizeTraj(waypointPath)
 
 
 if __name__ == '__main__':
