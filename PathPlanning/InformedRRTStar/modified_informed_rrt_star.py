@@ -1,17 +1,19 @@
+import time
 import random
 import numpy as np
+import cvxpy as cp
 import math
 import copy
 import matplotlib.pyplot as plt
 
 show_animation = True
-
+ALT_HOLD_CONTROLLER_REFRESH_RATE = 0.02 #[50Hz]
 
 class InformedRRTStar():
 
     def __init__(self, start, goal,
                  obstacleList, randArea,
-                 expandDis=0.5, goalSampleRate=10, maxIter=100):
+                 expandDis=0.5, goalSampleRate=10, maxIter=200):
 
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
@@ -21,6 +23,20 @@ class InformedRRTStar():
         self.goalSampleRate = goalSampleRate
         self.maxIter = maxIter
         self.obstacleList = obstacleList
+        # Time step iteration
+        self.h = 0.2
+        # Calculam care este raza minima a obstacolelor existente
+        obstacleMinRadius = min([min(tpl) for tpl in obstacleList])
+        
+        '''Vehicle related limits'''
+        # Acum determinam viteza maxima cunoscand timpul de iteratie si distanta minimima pe care permitem ca UAV-ul sa o parcurga (raportata la raza minima a obiectelor existente pe harta)
+        self.velMax = obstacleMinRadius/0.2
+        # Determinam acceleratia maxima
+        self.accMax = self.velMax/self.h
+        # Calculam distanta pe care o poate parcurge UAV-ul, functie de viteza maxima si de viteza de refresh a algoritmului controlerului care se ocupa cu functia de ALT_HOLD
+        self.safeDist = self.velMax*ALT_HOLD_CONTROLLER_REFRESH_RATE
+        # In final, calculam distanta (euclidiana) minima fata de obstacolele existente, la care putem esantiona puncte pentru a calcula un traseu apriori
+        self.minDist = obstacleMinRadius + self.safeDist
 
     def InformedRRTStarSearch(self, animation=True):
 
@@ -116,7 +132,7 @@ class InformedRRTStar():
 
     def findNearNodes(self, newNode):
         nnode = len(self.nodeList)
-        r = 50.0 * math.sqrt((math.log(nnode) / nnode))
+        r = 120.0 * math.sqrt((math.log(nnode) / nnode))
         dlist = [(node.x - newNode.x) ** 2
                  + (node.y - newNode.y) ** 2 for node in self.nodeList]
         nearinds = [dlist.index(i) for i in dlist if i <= r ** 2]
@@ -182,7 +198,7 @@ class InformedRRTStar():
             dx = ox - newNode.x
             dy = oy - newNode.y
             d = dx * dx + dy * dy
-            if d <= 1.1 * size**2:
+            if d <= size**2 + self.minDist**2:
                 return False  # collision
 
         return True  # safe
@@ -284,7 +300,7 @@ class InformedRRTStar():
 
     def GenerateWaypoint(self, path):
         pathLen = 0
-        safeDist = 0.05
+        
         waypointPath = []
         for i in range(len(path)-1,0,-1):
             node1_x = path[i][0]
@@ -296,19 +312,66 @@ class InformedRRTStar():
             theta = math.atan2(node2_y-node1_y, node2_x-node1_x)
             waypointPath.append([node1_x,node1_y])
             temp_n = copy.deepcopy(path[i])
-            while(pathLen > safeDist):
-                temp_n[0] += safeDist* math.cos(theta)
-                temp_n[1] += safeDist* math.sin(theta)
+            while(pathLen > self.minDist):
+                temp_n[0] += self.minDist* math.cos(theta)
+                temp_n[1] += self.minDist* math.sin(theta)
                 waypointPath.append([temp_n[0],temp_n[1]])
-                pathLen = pathLen - safeDist
+                pathLen = pathLen - self.minDist
             waypointPath.append([node2_x,node2_y])
 
         return waypointPath
 
-    def OptimizeTraj(self, waypointPath):
-        return('OK')
-    
+    def OptimizeTraj(self, waypoints):
+        # Initial precomputed path (waypoint based)
+        wp = np.matrix(waypoints)
 
+        # Number of states 
+        n = 4
+        # Number of inputs
+        m = 2
+
+        # Number of iterations
+        K = len(waypoints[0])
+        print(K)
+        
+        # Total time
+        T = self.h*K
+
+        # Kinematics of a point mass
+        A = np.matrix([[1,0,self.h,0],[0,1,0,self.h],[0,0,1,0],[0,0,0,1]])
+
+        B = np.matrix([[(self.h**2)/2,0],[0,(self.h**2)/2],[self.h,0],[0,self.h]])
+
+        # Start state
+        x_0 = np.array([0,0,0,0])
+
+        # Form and solve control problem.
+
+        x = cp.Variable((n, K+1))
+        u = cp.Variable((m, K))
+
+        cost = 0
+        constr = []
+        for t in range(0,K):
+            cost += cp.sum_squares(u[:,t])
+
+            constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
+                       cp.norm(wp[:,t] - x[:2,t][:,None],'inf') <= self.minDist,
+                       cp.norm(u[:,t], 'inf') <= self.accMax,
+                       cp.norm(x[2:,t], 'inf') <= self.velMax]
+        # sums problem objectives and concatenates constraints with the initial and final states.
+        constr += [x[:,K] == np.array([self.goal.x,self.goal.y,1,1]), x[:,0] == x_0]
+
+        # Time taken until this point
+        #end = time.time()
+        #print('Problem formulation:',end - start)
+        problem = cp.Problem(cp.Minimize(cost), constr)
+        problem.solve()
+        stateMat = np.matrix([x[0,:].value,x[1,:].value,x[2,:].value,x[3,:].value])
+        ctrlMat = np.matrix([u[0,:].value,u[1,:].value])
+        #print(ctrlMat)
+        # Returnam matricea cu starile pentru a extrage din aceasta pozitia (x,y), in vederea reprezentarii grafice
+        return stateMat
 
 class Node():
 
@@ -333,25 +396,36 @@ def main():
     ]
 
     # Set params
-    rrt = InformedRRTStar(start=[0, 0], goal=[5, 10],
+    rrt = InformedRRTStar(start=[0, 0], goal=[10, 10],
                           randArea=[-2, 15], obstacleList=obstacleList)
     path = rrt.InformedRRTStarSearch(animation=show_animation)
     while path is None:
         path = rrt.InformedRRTStarSearch(animation=show_animation)
     waypointPath = rrt.GenerateWaypoint(path)
-    print([x for (x, y) in waypointPath], [y for (x, y) in waypointPath])
-    print("Done!!")
+    #print([x for (x, y) in waypointPath], [y for (x, y) in waypointPath])
+    waypointXaxis = [x for (x, y) in waypointPath]
+    waypointYaxis = [y for (x, y) in waypointPath]
+
+    waypointMatrix = [waypointXaxis,waypointYaxis]
+    #print(waypointMatrix)
+    optimizedPath = rrt.OptimizeTraj(waypointMatrix)
+    #print(optimizedPath[0,],optimizedPath[1,])
+    #print(optimizedPath)
+    #print(waypointPath)
+    
 
     # Plot path
     if show_animation:
         rrt.drawGraph()
+        # Reprezentam grafic punctele determinate folosind metoda IRRT*
         plt.plot([x for (x, y) in path], [y for (x, y) in path], 'sr')
+        # Reprezentam grafic punctele GPS determinate, functie de constrangerile generate de scenariul de zbor
         plt.plot([x for (x, y) in waypointPath], [y for (x, y) in waypointPath], '^b')
+        # Reprezentam grafic punctele GPS obtinute dupa aplicarea algoritmului de optimizare a traciectoriei
+        plt.plot(optimizedPath[0,], optimizedPath[1,], '*y')
         plt.grid(True)
         plt.pause(0.01)
         plt.show()
-
-    trajOptim = rrt.OptimizeTraj(waypointPath)
 
 
 if __name__ == '__main__':
