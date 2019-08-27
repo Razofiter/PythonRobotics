@@ -13,7 +13,7 @@ class InformedRRTStar():
 
     def __init__(self, start, goal,
                  obstacleList, randArea,
-                 expandDis=0.5, goalSampleRate=10, maxIter=200):
+                 expandDis=0.5, goalSampleRate=-1, maxIter=100):
 
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
@@ -68,7 +68,7 @@ class InformedRRTStar():
             # cMin is the minimum distance between the start point and the goal
             # xCenter is the midpoint between the start and the goal
             # cBest changes when a new path is found
-
+            
             rnd = self.informed_sample(cBest, cMin, xCenter, C)
             nind = self.getNearestListIndex(self.nodeList, rnd)
             nearestNode = self.nodeList[nind]
@@ -95,9 +95,10 @@ class InformedRRTStar():
                     if tempPathLen < pathLen:
                         path = tempPath
                         cBest = tempPathLen
+                        print(cBest)
 
             if animation:
-                self.drawGraph(xCenter=xCenter,
+                GraphRepresentation.drawGraph(self,xCenter=xCenter,
                                cBest=cBest, cMin=cMin,
                                etheta=etheta, rnd=rnd)
 
@@ -132,7 +133,7 @@ class InformedRRTStar():
 
     def findNearNodes(self, newNode):
         nnode = len(self.nodeList)
-        r = 120.0 * math.sqrt((math.log(nnode) / nnode))
+        r = 10.0 * math.sqrt((math.log(nnode) / nnode))
         dlist = [(node.x - newNode.x) ** 2
                  + (node.y - newNode.y) ** 2 for node in self.nodeList]
         nearinds = [dlist.index(i) for i in dlist if i <= r ** 2]
@@ -165,6 +166,7 @@ class InformedRRTStar():
 
     def sampleFreeSpace(self):
         if random.randint(0, 100) > self.goalSampleRate:
+            print('aici')
             rnd = [random.uniform(self.minrand, self.maxrand),
                    random.uniform(self.minrand, self.maxrand)]
         else:
@@ -255,49 +257,7 @@ class InformedRRTStar():
             lastIndex = node.parent
         path.append([self.start.x, self.start.y])
         return path
-
-    def drawGraph(self, xCenter=None, cBest=None, cMin=None, etheta=None, rnd=None):
-
-        plt.clf()
-        if rnd is not None:
-            plt.plot(rnd[0], rnd[1], "^k")
-            if cBest != float('inf'):
-                self.plot_ellipse(xCenter, cBest, cMin, etheta)
-
-        for node in self.nodeList:
-            if node.parent is not None:
-                if node.x or node.y is not None:
-                    plt.plot([node.x, self.nodeList[node.parent].x], [
-                        node.y, self.nodeList[node.parent].y], "-g")
-
-        for (ox, oy, size) in self.obstacleList:
-            plt.plot(ox, oy, "ok", ms=30 * size)
-
-        plt.plot(self.start.x, self.start.y, "xr")
-        plt.plot(self.goal.x, self.goal.y, "xr")
-        plt.axis([-2, 15, -2, 15])
-        plt.grid(True)
-        plt.pause(0.01)
-
-    def plot_ellipse(self, xCenter, cBest, cMin, etheta):  # pragma: no cover
-
-        a = math.sqrt(cBest**2 - cMin**2) / 2.0
-        b = cBest / 2.0
-        angle = math.pi / 2.0 - etheta
-        cx = xCenter[0]
-        cy = xCenter[1]
-
-        t = np.arange(0, 2 * math.pi + 0.1, 0.1)
-        x = [a * math.cos(it) for it in t]
-        y = [b * math.sin(it) for it in t]
-        R = np.array([[math.cos(angle), math.sin(angle)],
-                      [-math.sin(angle), math.cos(angle)]])
-        fx = R @ np.array([x, y])
-        px = np.array(fx[0, :] + cx).flatten()
-        py = np.array(fx[1, :] + cy).flatten()
-        plt.plot(cx, cy, "xc")
-        plt.plot(px, py, "--c")
-
+        
     def GenerateWaypoint(self, path):
         pathLen = 0
         
@@ -373,6 +333,56 @@ class InformedRRTStar():
         # Returnam matricea cu starile pentru a extrage din aceasta pozitia (x,y), in vederea reprezentarii grafice
         return stateMat
 
+class GraphRepresentation():
+#    def __init__(self):
+#        print('init')
+#        self.xCenter = xCenter
+#        self.cBest = cBest
+#        self.cMin = cMin
+#        self.etheta = etheta
+        
+    def drawGraph(self, xCenter=None, cBest=None, cMin=None, etheta=None, rnd=None):
+
+        plt.clf()
+        if rnd is not None:
+            plt.plot(rnd[0], rnd[1], "^k")
+            if cBest != float('inf'):
+                GraphRepresentation.plot_ellipse(xCenter, cBest, cMin, etheta)
+
+        for node in self.nodeList:
+            if node.parent is not None:
+                if node.x or node.y is not None:
+                    plt.plot([node.x, self.nodeList[node.parent].x], [
+                        node.y, self.nodeList[node.parent].y], "-g")
+
+        for (ox, oy, size) in self.obstacleList:
+            plt.plot(ox, oy, "ok", ms=30 * size)
+
+        plt.plot(self.start.x, self.start.y, "xr")
+        plt.plot(self.goal.x, self.goal.y, "xr")
+        plt.axis([-2, 15, -2, 15])
+        plt.grid(True)
+        plt.pause(0.01)
+
+    def plot_ellipse(xCenter, cBest, cMin, etheta):
+
+        a = math.sqrt(cBest**2 - cMin**2) / 2.0
+        b = cBest / 2.0
+        angle = math.pi / 2.0 - etheta
+        cx = xCenter[0]
+        cy = xCenter[1]
+
+        t = np.arange(0, 2 * math.pi + 0.1, 0.1)
+        x = [a * math.cos(it) for it in t]
+        y = [b * math.sin(it) for it in t]
+        R = np.array([[math.cos(angle), math.sin(angle)],
+                      [-math.sin(angle), math.cos(angle)]])
+        fx = R @ np.array([x, y])
+        px = np.array(fx[0, :] + cx).flatten()
+        py = np.array(fx[1, :] + cy).flatten()
+        plt.plot(cx, cy, "xc")
+        plt.plot(px, py, "--c")
+
 class Node():
 
     def __init__(self, x, y):
@@ -390,13 +400,13 @@ def main():
         (5, 5, 0.5),
         (9, 6, 1),
         (7, 5, 1),
-        (1, 5, 1),
+        (2, 2, 1),
         (3, 6, 1),
         (7, 9, 1)
     ]
 
     # Set params
-    rrt = InformedRRTStar(start=[0, 0], goal=[10, 10],
+    rrt = InformedRRTStar(start=[0, 0], goal=[3, 0],
                           randArea=[-2, 15], obstacleList=obstacleList)
     path = rrt.InformedRRTStarSearch(animation=show_animation)
     while path is None:
@@ -409,20 +419,40 @@ def main():
     waypointMatrix = [waypointXaxis,waypointYaxis]
     #print(waypointMatrix)
     optimizedPath = rrt.OptimizeTraj(waypointMatrix)
+    
+    rrt1 = InformedRRTStar(start=[0, 0], goal=[1, 3],
+                          randArea=[-2, 15], obstacleList=obstacleList)
+    path1 = rrt1.InformedRRTStarSearch(animation=show_animation)
+    while path1 is None:
+        path1 = rrt1.InformedRRTStarSearch(animation=show_animation)
+    waypointPath1 = rrt1.GenerateWaypoint(path1)
+    #print([x for (x, y) in waypointPath], [y for (x, y) in waypointPath])
+    waypointXaxis1 = [x for (x, y) in waypointPath1]
+    waypointYaxis1 = [y for (x, y) in waypointPath1]
+
+    waypointMatrix1 = [waypointXaxis1,waypointYaxis1]
+    #print(waypointMatrix)
+    optimizedPath1 = rrt1.OptimizeTraj(waypointMatrix1)
     #print(optimizedPath[0,],optimizedPath[1,])
     #print(optimizedPath)
     #print(waypointPath)
-    
+    #graph = GraphRepresentation()
 
     # Plot path
     if show_animation:
-        rrt.drawGraph()
+        #GraphRepresentation.drawGraph(self)
         # Reprezentam grafic punctele determinate folosind metoda IRRT*
         plt.plot([x for (x, y) in path], [y for (x, y) in path], 'sr')
         # Reprezentam grafic punctele GPS determinate, functie de constrangerile generate de scenariul de zbor
         plt.plot([x for (x, y) in waypointPath], [y for (x, y) in waypointPath], '^b')
         # Reprezentam grafic punctele GPS obtinute dupa aplicarea algoritmului de optimizare a traciectoriei
         plt.plot(optimizedPath[0,], optimizedPath[1,], '*y')
+        
+        plt.plot([x for (x, y) in path1], [y for (x, y) in path1], 'sr')
+        # Reprezentam grafic punctele GPS determinate, functie de constrangerile generate de scenariul de zbor
+        plt.plot([x for (x, y) in waypointPath1], [y for (x, y) in waypointPath1], '^b')
+        # Reprezentam grafic punctele GPS obtinute dupa aplicarea algoritmului de optimizare a traciectoriei
+        plt.plot(optimizedPath1[0,], optimizedPath1[1,], '*y')
         plt.grid(True)
         plt.pause(0.01)
         plt.show()
