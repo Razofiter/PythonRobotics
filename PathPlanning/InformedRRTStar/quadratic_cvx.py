@@ -56,10 +56,6 @@ for t in range(0,K):
     #diff = wp[:2,t] - x[:2,t][:,None]
     #print(diff)
     constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
-               #np.linalg.norm(wp[:2,t]-x[:2,t]) <=l,
-               #cp.norm(cp.norm((wp[:2,t] - x[:2,t]),2),'inf') <= l,
-               #cp.sqrt(cp.sum(cp.square(wp[:,t] - x[:,t]))) <=l,
-               
                cp.norm(wp[:,t] - x[:2,t][:,None],'inf') <= l,
                cp.norm(u[:,t], 'inf') <= Amax,
                cp.norm(x[2:,t], 'inf') <= Vmax]

@@ -1,7 +1,8 @@
 import time
 import random
 import numpy as np
-import cvxpy as cp
+import cvxopt as co
+from cvxopt.modeling import variable, op
 import math
 import copy
 import matplotlib.pyplot as plt
@@ -68,45 +69,35 @@ class GraphRepresentation():
         B = np.matrix([[(self.h**2)/2,0],[0,(self.h**2)/2],[self.h,0],[0,self.h]])
 
         # Start state
-        x_0 = np.array([self.start.x,self.start.y,0,0])
+        x_0 = np.array([0,0,0,0])
 
         # Form and solve control problem.
 
-        x = cp.Variable((n, K+1))
-        u = cp.Variable((m, K))
+        x = co.normal(n, K+1)
+        u = co.normal(m, K)
 
         cost = 0
-        constr = []
-        
+        #constr = []
+        print(x)
         # Convert obstacle list into a matrix
         obstacleList = np.asarray(self.obstacleList)
         print(obstacleList)
         print(self.minDist)
+        
         for t in range(0,K):
-            cost += cp.sum_squares(u[:,t])
-            
-            a = cp.sum_squares(x[:2,t]-obstacleList[1,:2]) - cp.square(obstacleList[1,2])
-            b = cp.multiply(2,cp.multiply(x[0,t]-obstacleList[1,0],x[0,t+1]-obstacleList[1,0]-x[0,t]-obstacleList[1,0])) + cp.multiply(x[1,t]-obstacleList[1,1],x[1,t+1]-obstacleList[1,1]-x[1,t]-obstacleList[1,1])
-            c = cp.square(x[0,t+1]-obstacleList[1,0]-x[0,t]-obstacleList[1,0]) + cp.square(x[1,t+1]-obstacleList[1,1]-x[1,t]-obstacleList[1,1])
-            constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
-            cp.square(b) <= 4*a*c,
-            cp.norm(x[:2,t],2) <= cp.norm(obstacleList[1,:2],2) + obstacleList[1,2],
-            cp.norm(u[:,t], 'inf') <= self.accMax,
-            cp.norm(x[2:,t], 'inf') <= self.velMax]
-            #cp.square(cp.sum([x[0,t],-obstacleList[1,0]]))) <= 0,
-                      #np.multiply(1,(x[0,t]-obstacleList[1,0])**2) + (x[1,t]-obstacleList[1,1])**2  >= obstacleList[1,2]**2,
-                      #cp.sum([cp.norm(obstacleList[0,:2][:,None] - x[:2,t][:,None],'inf'),-obstacleList[0,2]]) <= '-inf',
-                      #cp.sum([-obstacleList[0,2],cp.abs(cp.sum([x[0,t],-obstacleList[0,0]]))]) <= 0,
-            #cp.sum([obstacleList[1,2],self.minDist]),
-                               
-      
+            cost += u[0,t]**2+u[1,t]**2
+           
+            #constr.append(x[:,t+1] == A@x[:,t] + B@u[:,t])
+            #constr += [(x[:,t+1] == A@x[:,t] + B@u[:,t]),(-(x[0,t]-obstacleList[1,0])**2 - (x[1,t]-obstacleList[1,1])**2 + obstacleList[1,2]**2 <= 0),(math.sqrt(u[0,t]**2 + u[1,t]**2) <= self.accMax),(math.sqrt(x[2,t]**2 + x[3,t]**2) <= self.velMax)]         
         # sums problem objectives and concatenates constraints with the initial and final states.
-        constr += [x[:,K] == np.array([self.goal.x,self.goal.y,1,1]), x[:,0] == x_0]
-
+        constr = u[0,0] <= self.accMax
+        #constr += (x[:,K] == np.array([self.goal.x,self.goal.y,1,1])), (x[:,0] == x_0)
+        print(constr)
         # Time taken until this point
         #end = time.time()
         #print('Problem formulation:',end - start)
-        problem = cp.Problem(cp.Minimize(cost), constr)
+        problem = op(cost, constr)
+
         problem.solve()
         print(x,u)
         stateMat = np.matrix([x[0,:].value,x[1,:].value,x[2,:].value,x[3,:].value])

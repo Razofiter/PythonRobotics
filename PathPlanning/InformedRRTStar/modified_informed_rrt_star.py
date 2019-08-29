@@ -18,7 +18,8 @@ class InformedRRTStar():
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
         self.minrand = randArea[0]
-        self.maxrand = randArea[1]
+        self.maxrandX = randArea[1]
+        self.maxrandY = randArea[2]
         self.expandDis = expandDis
         self.goalSampleRate = goalSampleRate
         self.maxIter = maxIter
@@ -167,8 +168,8 @@ class InformedRRTStar():
     def sampleFreeSpace(self):
         if random.randint(0, 100) > self.goalSampleRate:
             print('aici')
-            rnd = [random.uniform(self.minrand, self.maxrand),
-                   random.uniform(self.minrand, self.maxrand)]
+            rnd = [random.uniform(self.minrand, self.maxrandX),
+                   random.uniform(self.minrand, self.maxrandY)]
         else:
             rnd = [self.goal.x, self.goal.y]
 
@@ -360,7 +361,7 @@ class GraphRepresentation():
 
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.goal.x, self.goal.y, "xr")
-        plt.axis([-2, 15, -2, 15])
+        plt.axis([0, 70, 0, 30])
         plt.grid(True)
         plt.pause(0.01)
 
@@ -407,7 +408,7 @@ def main():
 
     # Set params
     rrt = InformedRRTStar(start=[0, 0], goal=[3, 0],
-                          randArea=[-2, 15], obstacleList=obstacleList)
+                          randArea=[0, 70, 30], obstacleList=obstacleList)
     path = rrt.InformedRRTStarSearch(animation=show_animation)
     while path is None:
         path = rrt.InformedRRTStarSearch(animation=show_animation)
@@ -420,7 +421,7 @@ def main():
     #print(waypointMatrix)
     optimizedPath = rrt.OptimizeTraj(waypointMatrix)
     
-    rrt1 = InformedRRTStar(start=[0, 0], goal=[1, 3],
+    rrt1 = InformedRRTStar(start=[2, 2], goal=[1, 3],
                           randArea=[-2, 15], obstacleList=obstacleList)
     path1 = rrt1.InformedRRTStarSearch(animation=show_animation)
     while path1 is None:
