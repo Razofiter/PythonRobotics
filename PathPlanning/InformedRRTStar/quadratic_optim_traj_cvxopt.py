@@ -70,15 +70,28 @@ class GraphRepresentation():
 
         # Start state
         x_0 = np.array([0,0,0,0])
+              
+#        col = variable(m)
+        #col = np.zeros((2,1))
+        el = variable()
+        #print(col.shape)
+        #u = np.array(col)
+        u = np.zeros((m,K))
+        print(u.shape)
+        for i in range(0,m):
+            for j in range(0,K):
+                u[i,j] = el.value()
+        print(u.shape)
+        #print(co.matrix(u))
+        #x = co.normal(n, K+1)
+        #for i in range(1,K):
+            #u =np.append(u,[[1.,2.]], axis=1)
+            #u = np.vstack([u,[1.,2.]])
+#        u = co.normal(m, K)
 
-        # Form and solve control problem.
-
-        x = co.normal(n, K+1)
-        u = co.normal(m, K)
-
-        cost = 0
+        #cost = 0
         #constr = []
-        print(x)
+        #print(u)
         # Convert obstacle list into a matrix
         obstacleList = np.asarray(self.obstacleList)
         print(obstacleList)
