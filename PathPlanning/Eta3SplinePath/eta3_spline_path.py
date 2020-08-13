@@ -36,16 +36,17 @@ class eta3_path(object):
         for r, s in zip(segments[:-1], segments[1:]):
             assert(np.array_equal(r.end_pose, s.start_pose))
         self.segments = segments
-    """
-    eta3_path::calc_path_point
-
-    input
-        normalized interpolation point along path object, 0 <= u <= len(self.segments)
-    returns
-        2d (x,y) position vector
-    """
 
     def calc_path_point(self, u):
+        """
+        eta3_path::calc_path_point
+
+        input
+            normalized interpolation point along path object, 0 <= u <= len(self.segments)
+        returns
+            2d (x,y) position vector
+        """
+
         assert(u >= 0 and u <= len(self.segments))
         if np.isclose(u, len(self.segments)):
             segment_idx = len(self.segments) - 1
@@ -153,22 +154,39 @@ class eta3_path_segment(object):
             - (2. * eta[1]**2 * kappa[2] - 1. / 6 * eta[1]**3 *
                kappa[3] - 1. / 2 * eta[1] * eta[3] * kappa[2]) * cb
 
-        def s_dot(u): return np.linalg.norm(self.coeffs[:, 1:].dot(
-            np.array([1, 2. * u, 3. * u**2, 4. * u**3, 5. * u**4, 6. * u**5, 7. * u**6])))
-        self.segment_length = quad(lambda u: s_dot(u), 0, 1)[0]
-
-    """
-    eta3_path_segment::calc_point
-
-    input
-        u - parametric representation of a point along the segment, 0 <= u <= 1
-    returns
-        (x,y) of point along the segment
-    """
+        self.s_dot = lambda u: max(np.linalg.norm(self.coeffs[:, 1:].dot(np.array(
+            [1, 2. * u, 3. * u**2, 4. * u**3, 5. * u**4, 6. * u**5, 7. * u**6]))), 1e-6)
+        self.f_length = lambda ue: quad(lambda u: self.s_dot(u), 0, ue)
+        self.segment_length = self.f_length(1)[0]
 
     def calc_point(self, u):
+        """
+        eta3_path_segment::calc_point
+
+        input
+            u - parametric representation of a point along the segment, 0 <= u <= 1
+        returns
+            (x,y) of point along the segment
+        """
         assert(u >= 0 and u <= 1)
         return self.coeffs.dot(np.array([1, u, u**2, u**3, u**4, u**5, u**6, u**7]))
+
+    def calc_deriv(self, u, order=1):
+        """
+        eta3_path_segment::calc_deriv
+
+        input
+            u - parametric representation of a point along the segment, 0 <= u <= 1
+        returns
+            (d^nx/du^n,d^ny/du^n) of point along the segment, for 0 < n <= 2
+        """
+
+        assert(u >= 0 and u <= 1)
+        assert(order > 0 and order <= 2)
+        if order == 1:
+            return self.coeffs[:, 1:].dot(np.array([1, 2. * u, 3. * u**2, 4. * u**3, 5. * u**4, 6. * u**5, 7. * u**6]))
+
+        return self.coeffs[:, 2:].dot(np.array([2, 6. * u, 12. * u**2, 20. * u**3, 30. * u**4, 42. * u**5]))
 
 
 def test1():
@@ -195,6 +213,9 @@ def test1():
         if show_animation:
             # plot the path
             plt.plot(pos[0, :], pos[1, :])
+            # for stopping simulation with the esc key.
+            plt.gcf().canvas.mpl_connect('key_release_event',
+                    lambda event: [exit(0) if event.key == 'escape' else None])
             plt.pause(1.0)
 
     if show_animation:

@@ -15,7 +15,7 @@ Extended Kalman Filter Localization
 
 
 
-.. figure:: https://github.com/AtsushiSakai/PythonRobotics/raw/master/Localization/extended_kalman_filter/animation.gif
+.. figure:: https://github.com/AtsushiSakai/PythonRoboticsGifs/raw/master/Localization/extended_kalman_filter/animation.gif
    :alt: EKF
 
    EKF
@@ -39,9 +39,9 @@ Filter design
 In this simulation, the robot has a state vector includes 4 states at
 time :math:`t`.
 
-.. math:: \textbf{x}_t=[x_t, y_t, \theta_t, v_t]
+.. math:: \textbf{x}_t=[x_t, y_t, \phi_t, v_t]
 
-x, y are a 2D x-y position, :math:`\theta` is orientation, and v is
+x, y are a 2D x-y position, :math:`\phi` is orientation, and v is
 velocity.
 
 In the code, “xEst” means the state vector.
@@ -91,7 +91,7 @@ where
 
 :math:`\begin{equation*} F= \begin{bmatrix} 1 & 0 & 0 & 0\\ 0 & 1 & 0 & 0\\ 0 & 0 & 1 & 0 \\ 0 & 0 & 0 & 0 \\ \end{bmatrix} \end{equation*}`
 
-:math:`\begin{equation*} B= \begin{bmatrix} sin(\phi)dt & 0\\ cos(\phi)dt & 0\\ 0 & dt\\ 1 & 0\\ \end{bmatrix} \end{equation*}`
+:math:`\begin{equation*} B= \begin{bmatrix} cos(\phi)dt & 0\\ sin(\phi)dt & 0\\ 0 & dt\\ 1 & 0\\ \end{bmatrix} \end{equation*}`
 
 :math:`dt` is a time interval.
 

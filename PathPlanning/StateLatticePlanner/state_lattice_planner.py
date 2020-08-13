@@ -4,19 +4,32 @@ State lattice planner with model predictive trajectory generator
 
 author: Atsushi Sakai (@Atsushi_twi)
 
+- lookuptable.csv is generated with this script: https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathPlanning/ModelPredictiveTrajectoryGenerator/lookuptable_generator.py
+
+Ref:
+
+- State Space Sampling of Feasible Motions for High-Performance Mobile Robot Navigation in Complex Environments http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.187.8210&rep=rep1&type=pdf
+
 """
 import sys
-
-sys.path.append("../ModelPredictiveTrajectoryGenerator")
-
+import os
 from matplotlib import pyplot as plt
 import numpy as np
 import math
 import pandas as pd
-import model_predictive_trajectory_generator as planner
-import motion_model
 
-table_path = "./lookuptable.csv"
+sys.path.append(os.path.dirname(os.path.abspath(__file__))
+                + "/../ModelPredictiveTrajectoryGenerator/")
+
+
+try:
+    import model_predictive_trajectory_generator as planner
+    import motion_model
+except:
+    raise
+
+
+table_path = os.path.dirname(os.path.abspath(__file__)) + "/lookuptable.csv"
 
 show_animation = True
 
@@ -54,8 +67,8 @@ def generate_path(target_states, k0):
             state[0], state[1], state[2], lookup_table)
 
         target = motion_model.State(x=state[0], y=state[1], yaw=state[2])
-        init_p = np.matrix(
-            [math.sqrt(state[0] ** 2 + state[1] ** 2), bestp[4], bestp[5]]).T
+        init_p = np.array(
+            [math.sqrt(state[0] ** 2 + state[1] ** 2), bestp[4], bestp[5]]).reshape(3, 1)
 
         x, y, yaw, p = planner.optimize_trajectory(target, k0, init_p)
 

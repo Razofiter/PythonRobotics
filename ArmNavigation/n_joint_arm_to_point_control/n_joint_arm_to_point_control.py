@@ -21,7 +21,7 @@ MOVING_TO_GOAL = 2
 show_animation = True
 
 
-def main():
+def main():  # pragma: no cover
     """
     Creates an arm using the NLinkArm class and uses its inverse kinematics
     to move it to the desired position.
@@ -148,7 +148,7 @@ def jacobian_inverse(link_lengths, joint_angles):
 def distance_to_goal(current_pos, goal_pos):
     x_diff = goal_pos[0] - current_pos[0]
     y_diff = goal_pos[1] - current_pos[1]
-    return np.array([x_diff, y_diff]).T, np.math.sqrt(x_diff**2 + y_diff**2)
+    return np.array([x_diff, y_diff]).T, np.hypot(x_diff, y_diff)
 
 
 def ang_diff(theta1, theta2):
@@ -159,5 +159,5 @@ def ang_diff(theta1, theta2):
 
 
 if __name__ == '__main__':
-    main()
-    # animation()
+    # main()
+    animation()
