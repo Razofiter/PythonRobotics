@@ -55,7 +55,8 @@ for t in range(0,K):
     #diff = wp[:2,t] - x[:2,t][:,None]
     #print(diff)
     constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
-               cp.norm(wp[:,t] - x[:2,t][:,None],'inf') <= l,
+               #cp.norm(wp[:,t] - x[:2,t][:,None],'inf') <= l,
+               cp.norm(x[:2,t][:,None] - wp[:,t],2) <= l,
                cp.norm(u[:,t], 'inf') <= Amax,
                cp.norm(x[2:,t], 'inf') <= Vmax]
 # sums problem objectives and concatenates constraints with the initial and final states.

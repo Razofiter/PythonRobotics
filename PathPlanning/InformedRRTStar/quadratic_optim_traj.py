@@ -26,7 +26,7 @@ class GraphRepresentation():
         self.maxIter = maxIter
         self.obstacleList = obstacleList
         # Time step iteration
-        self.h = 0.2
+        self.h = 0.5
         # Calculam care este raza minima a obstacolelor existente
         obstacleMinRadius = min([min(tpl) for tpl in obstacleList])
         
@@ -77,6 +77,9 @@ class GraphRepresentation():
 
         cost = 0
         constr = []
+
+        # Safe distance
+        l = 0.5
         
         # Convert obstacle list into a matrix
         obstacleList = np.asarray(self.obstacleList)
@@ -86,12 +89,10 @@ class GraphRepresentation():
             cost += cp.sum_squares(u[:,t])
             
             constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
-            (cp.multiply(cp.inv_pos(cp.norm(x[:2,t] - obstacleList[1,:2],2)), obstacleList[1,2])) <= 1,
-            #cp.norm(x[:2,t],2) <= cp.norm(obstacleList[1,:2],2) + obstacleList[1,2],
-            cp.norm(u[:,t], 'inf') <= self.accMax,
-            cp.norm(x[2:,t], 'inf') <= self.velMax]
-            #cp.square(cp.sum([x[0,t],-obstacleList[1,0]]))) <= 0,
-            #np.multiply(1,(x[0,t]-obstacleList[1,0])**2) + (x[1,t]-obstacleList[1,1])**2  >= obstacleList[1,2]**2,                   
+            #cp.abs(obstacleList[1,1]) - cp.abs(x[1,t]) <=0]
+            cp.norm(x[:2,t] - obstacleList[1,:2],2) <=10]
+            #cp.norm(u[:,t], 'inf') <= self.accMax,
+            #cp.norm(x[2:,t], 'inf') <= self.velMax]                   
       
         # sums problem objectives and concatenates constraints with the initial and final states.
         constr += [x[:,K] == np.array([self.goal.x,self.goal.y,1,1]), x[:,0] == x_0]
@@ -100,7 +101,7 @@ class GraphRepresentation():
         #end = time.time()
         #print('Problem formulation:',end - start)
         problem = cp.Problem(cp.Minimize(cost), constr)
-        problem.solve()
+        problem.solve(verbose = True,qcp='True')
         print(x,u)
         stateMat = np.matrix([x[0,:].value,x[1,:].value,x[2,:].value,x[3,:].value])
         ctrlMat = np.matrix([u[0,:].value,u[1,:].value])
