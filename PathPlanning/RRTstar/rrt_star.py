@@ -8,6 +8,7 @@ import math
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 show_animation = True
 
@@ -18,7 +19,7 @@ class RRT():
     """
 
     def __init__(self, start, goal, obstacleList, randArea,
-                 expandDis=0.5, goalSampleRate=20, maxIter=1000):
+                 expandDis=1, goalSampleRate=5, maxIter=100):
         """
         Setting Parameter
         start:Start Position [x,y]
@@ -55,14 +56,24 @@ class RRT():
                 self.nodeList.append(newNode)
                 self.rewire(newNode, nearinds)
 
-            if animation:
-                self.DrawGraph(rnd)
+            # if animation:
+            #     self.DrawGraph(rnd)
 
         # generate coruse
         lastIndex = self.get_best_last_index()
         if lastIndex is None:
             return None
         path = self.gen_final_course(lastIndex)
+
+        cost = 0.0
+        # Compute path cost
+        for k in range(len(path)-1):
+            dx = path[k+1][0] - path[k][0]
+            dy = path[k+1][1] - path[k][1]
+            d = math.sqrt(dx ** 2 + dy ** 2)
+            cost = cost + d
+        print(cost)
+        print("--- %s seconds ---" % (time.time() - start_time))
         return path
 
     def choose_parent(self, newNode, nearinds):
@@ -237,13 +248,22 @@ def main():
     print("Start rrt planning")
 
     # ====Search Path with RRT====
+    # obstacleList = [
+    #     (5, 5, 1),
+    #     (3, 6, 2),
+    #     (3, 8, 2),
+    #     (3, 10, 2),
+    #     (7, 5, 2),
+    #     (9, 5, 2)
+    # ]  # [x,y,size(radius)]
+
     obstacleList = [
-        (5, 5, 1),
-        (3, 6, 2),
-        (3, 8, 2),
-        (3, 10, 2),
-        (7, 5, 2),
-        (9, 5, 2)
+    (5, 5, 0),
+    (3, 6, 0),
+    (3, 8, 0),
+    (3, 10, 0),
+    (7, 5, 0),
+    (9, 5, 0)
     ]  # [x,y,size(radius)]
 
     # Set Initial parameters
@@ -252,13 +272,16 @@ def main():
     path = rrt.Planning(animation=show_animation)
 
     # Draw final path
-    if show_animation:
+    if show_animation and path is not None:
         rrt.DrawGraph()
         plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
         plt.grid(True)
         plt.pause(0.01)  # Need for Mac
         plt.show()
 
 
 if __name__ == '__main__':
+    start_time = time.time()
     main()
