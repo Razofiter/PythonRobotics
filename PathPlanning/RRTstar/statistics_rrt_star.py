@@ -50,8 +50,8 @@ class RRT():
         """
 
         self.nodeList = [self.start]
-        for i in range(self.maxIter):
-        # while(True):
+        # for i in range(self.maxIter):
+        while(True):
             rnd = self.get_random_point()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
@@ -67,23 +67,24 @@ class RRT():
             # if animation:
             #     self.DrawGraph(rnd)
 
-        # generate course
-        lastIndex = self.get_best_last_index()
-        if lastIndex is not None:
-            path = self.gen_final_course(lastIndex)
+            # generate course
+            lastIndex = self.get_best_last_index()
+            if lastIndex is not None:
+                path = self.gen_final_course(lastIndex)
 
-            timeRun = time.time() - start_time
-            cost = 0.0
-            # Compute path cost
-            for k in range(len(path)-1):
-                dx = path[k+1][0] - path[k][0]
-                dy = path[k+1][1] - path[k][1]
-                d = math.sqrt(dx ** 2 + dy ** 2)
-                cost = cost + d
+                cost = 0.0
+                # Compute path cost
+                for k in range(len(path)-1):
+                    dx = path[k+1][0] - path[k][0]
+                    dy = path[k+1][1] - path[k][1]
+                    d = math.sqrt(dx ** 2 + dy ** 2)
+                    cost = cost + d
+                
+                timeRun = time.time() - start_time
 
-            print("--- %s seconds ---" % timeRun)
-            print (cost)
-            return path,timeRun,cost  
+                print("--- %s seconds ---" % timeRun)
+                print (cost)
+                return path,timeRun,cost  
 
 
     def choose_parent(self, newNode, nearinds):
@@ -284,7 +285,7 @@ def main():
     timeRunList = []
     costList = []         
      # Run the algorithm multiple times
-    algIterNumber = 1000
+    algIterNumber = 10000
     for n in range(algIterNumber): 
         result  = rrt.Planning(animation=show_animation)    
         if result is not None:
