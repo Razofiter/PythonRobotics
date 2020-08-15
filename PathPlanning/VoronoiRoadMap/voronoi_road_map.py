@@ -183,7 +183,7 @@ def dijkstra_planning(sx, sy, gx, gy, ox, oy, rr, road_map, sample_x, sample_y):
 
         # show graph
         if show_animation and len(closedset.keys()) % 2 == 0:
-            plt.plot(current.x, current.y, "xg")
+            plt.plot(current.x, current.y, "xy")
             plt.pause(0.001)
 
         if c_id == (len(road_map) - 1):

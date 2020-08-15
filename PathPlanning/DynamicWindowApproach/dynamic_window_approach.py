@@ -199,11 +199,13 @@ def main():
         if show_animation:
             plt.cla()
             plt.plot(ltraj[:, 0], ltraj[:, 1], "-g")
-            plt.plot(x[0], x[1], "xr")
-            plt.plot(goal[0], goal[1], "xb")
+            plt.plot(x[0], x[1], "or")
+            plt.plot(goal[0], goal[1], "ob")
             plt.plot(ob[:, 0], ob[:, 1], "ok")
             plot_arrow(x[0], x[1], x[2])
             plt.axis("equal")
+            plt.xlabel("x [m]")
+            plt.ylabel("y [m]")
             plt.grid(True)
             plt.pause(0.0001)
 
@@ -215,6 +217,8 @@ def main():
     print("Done")
     if show_animation:
         plt.plot(traj[:, 0], traj[:, 1], "-r")
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
         plt.pause(0.0001)
 
     plt.show()

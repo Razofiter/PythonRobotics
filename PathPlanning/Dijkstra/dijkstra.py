@@ -205,8 +205,8 @@ def main():
 
     if show_animation:
         plt.plot(ox, oy, ".k")
-        plt.plot(sx, sy, "xr")
-        plt.plot(gx, gy, "xb")
+        plt.plot(sx, sy, "sr")
+        plt.plot(gx, gy, "sb")
         plt.grid(True)
         plt.axis("equal")
 

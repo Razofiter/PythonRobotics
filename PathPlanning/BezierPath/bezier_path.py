@@ -164,11 +164,11 @@ def main():
 
     if show_animation:
         fig, ax = plt.subplots()
-        ax.plot(path.T[0], path.T[1], label="Bezier Path")
-        ax.plot(control_points.T[0], control_points.T[1], '--o', label="Control Points")
+        ax.plot(path.T[0], path.T[1], label="Curba bezier")
+        ax.plot(control_points.T[0], control_points.T[1], '--o', label="Puncte de control")
         ax.plot(x_target, y_target)
-        ax.plot(tangent[:, 0], tangent[:, 1], label="Tangent")
-        ax.plot(normal[:, 0], normal[:, 1], label="Normal")
+        ax.plot(tangent[:, 0], tangent[:, 1], label="Vectorul tangent la traiectorie")
+        ax.plot(normal[:, 0], normal[:, 1], label="Vectorul normal la traiectorie")
         ax.add_artist(circle)
         plot_arrow(start_x, start_y, start_yaw)
         plot_arrow(end_x, end_y, end_yaw)
@@ -197,7 +197,7 @@ def main2():
         assert path.T[1][-1] == end_y, "path is invalid"
 
         if show_animation:
-            plt.plot(path.T[0], path.T[1], label="Offset=" + str(offset))
+            plt.plot(path.T[0], path.T[1], label="Kdist=" + str(offset))
 
     if show_animation:
         plot_arrow(start_x, start_y, start_yaw)
@@ -210,4 +210,4 @@ def main2():
 
 if __name__ == '__main__':
     main()
-    #  main2()
+    main2()
