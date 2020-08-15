@@ -151,6 +151,7 @@ def main():
         (7, 5, 2),
         (9, 5, 2)
     ]  # [x,y,size]
+    
     # Set Initial parameters
     rrt = RRT(start=[0, 0], goal=[5, 10],
               randArea=[-2, 15], obstacleList=obstacleList)
