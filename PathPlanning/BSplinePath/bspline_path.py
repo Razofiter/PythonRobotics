@@ -44,8 +44,12 @@ def main():
     rx, ry = bspline_planning(x, y, sn)
 
     # show results
-    plt.plot(x, y, '-og', label="Waypoints")
-    plt.plot(rx, ry, '-r', label="B-Spline path")
+    plt.plot(x[0], y[0], '>b', label="punct de start")
+    plt.plot(x[4], y[4], '^b', label="punct de stop")
+    plt.plot(x, y, '-xb', label="puncte de destinatie intermediare")
+    # plt.plot([x[1], x[2], x[3]], [y[1], y[2], y[3]], '-ob', label="puncte de destinatie intermediare")
+    plt.plot(rx, ry, '-r')
+    # plt.plot(rx, ry, '-r', label="B-Spline path")
     plt.grid(True)
     plt.legend()
     plt.axis("equal")
