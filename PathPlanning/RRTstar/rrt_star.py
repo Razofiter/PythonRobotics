@@ -59,7 +59,7 @@ class RRT():
             # if animation:
             #     self.DrawGraph(rnd)
 
-        # generate coruse
+        # generate course
         lastIndex = self.get_best_last_index()
         if lastIndex is None:
             return None
