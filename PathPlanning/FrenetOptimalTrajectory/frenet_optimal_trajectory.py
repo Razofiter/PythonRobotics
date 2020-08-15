@@ -352,6 +352,8 @@ def main():
             plt.xlim(path.x[1] - area, path.x[1] + area)
             plt.ylim(path.y[1] - area, path.y[1] + area)
             plt.title("v[km/h]:" + str(c_speed * 3.6)[0:4])
+            plt.xlabel("x [m]")
+            plt.ylabel("y [m]")
             plt.grid(True)
             plt.pause(0.0001)
 
