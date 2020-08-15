@@ -1,8 +1,6 @@
 """
 Path Planning Sample Code with RRT*
-
 author: AtsushiSakai(@Atsushi_twi)
-
 """
 
 import random
@@ -10,28 +8,23 @@ import math
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-import time
-from statistics import mean
-from scipy.stats import norm
 
 show_animation = True
-start_time = 0.0
+
 
 class RRT():
     """
     Class for RRT Planning
     """
-    global start_time
+
     def __init__(self, start, goal, obstacleList, randArea,
-                 expandDis=1.0, goalSampleRate=5, maxIter=200):
+                 expandDis=0.5, goalSampleRate=20, maxIter=1000):
         """
         Setting Parameter
-
         start:Start Position [x,y]
         goal:Goal Position [x,y]
         obstacleList:obstacle Positions [[x,y,size],...]
         randArea:Ramdom Samping Area [min,max]
-
         """
         self.start = Node(start[0], start[1])
         self.end = Node(goal[0], goal[1])
@@ -45,13 +38,11 @@ class RRT():
     def Planning(self, animation=True):
         """
         Pathplanning
-
         animation: flag for animation on or off
         """
 
         self.nodeList = [self.start]
-        # for i in range(self.maxIter):
-        while(True):
+        for i in range(self.maxIter):
             rnd = self.get_random_point()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
@@ -64,27 +55,15 @@ class RRT():
                 self.nodeList.append(newNode)
                 self.rewire(newNode, nearinds)
 
-            # if animation:
-            #     self.DrawGraph(rnd)
+            if animation:
+                self.DrawGraph(rnd)
 
-            # generate course
-            lastIndex = self.get_best_last_index()
-            if lastIndex is not None:
-                path = self.gen_final_course(lastIndex)
-
-                timeRun = time.time() - start_time
-                cost = 0.0
-                # Compute path cost
-                for k in range(len(path)-1):
-                    dx = path[k+1][0] - path[k][0]
-                    dy = path[k+1][1] - path[k][1]
-                    d = math.sqrt(dx ** 2 + dy ** 2)
-                    cost = cost + d
-
-                print("--- %s seconds ---" % timeRun)
-                print (cost)
-                return path,timeRun,cost  
-
+        # generate coruse
+        lastIndex = self.get_best_last_index()
+        if lastIndex is None:
+            return None
+        path = self.gen_final_course(lastIndex)
+        return path
 
     def choose_parent(self, newNode, nearinds):
         if len(nearinds) == 0:
@@ -204,7 +183,7 @@ class RRT():
         return True
 
     def DrawGraph(self, rnd=None):
-        """
+        u"""
         Draw Graph
         """
         plt.clf()
@@ -255,71 +234,31 @@ class Node():
 
 
 def main():
-    global start_time
     print("Start rrt planning")
 
     # ====Search Path with RRT====
-    # obstacleList = [
-    #     (5, 5, 1),
-    #     (3, 6, 2),
-    #     (3, 8, 2),
-    #     (3, 10, 2),
-    #     (7, 5, 2),
-    #     (9, 5, 2)
-    # ]  # [x,y,size(radius)]
-
     obstacleList = [
-    (5, 5, 0),
-    (3, 10, 0),
-    (9, 5, 0)
-    ]  # [x,y,size]
+        (5, 5, 1),
+        (3, 6, 2),
+        (3, 8, 2),
+        (3, 10, 2),
+        (7, 5, 2),
+        (9, 5, 2)
+    ]  # [x,y,size(radius)]
 
     # Set Initial parameters
     rrt = RRT(start=[0, 0], goal=[5, 10],
               randArea=[-2, 15], obstacleList=obstacleList)
+    path = rrt.Planning(animation=show_animation)
 
-    timeRunList = []
-    costList = []         
-     # Run the algorithm 1000 times
-    for n in range(1000):     
-        path, timeRun, cost = rrt.Planning(animation=show_animation)
-        timeRunList.append(timeRun)
-        costList.append(cost)
-        start_time = time.time()
+    # Draw final path
+    if show_animation:
+        rrt.DrawGraph()
+        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        plt.grid(True)
+        plt.pause(0.01)  # Need for Mac
+        plt.show()
 
-        # Draw final path
-        # if show_animation and path is not None:
-        #     rrt.DrawGraph()
-        #     plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
-        #     plt.grid(True)
-        #     plt.show()
-    
-    # Do stuff for analytics            
-    print("Cost list >>>" + str(costList))
-    print("Time list >>>" + str(timeRunList))
-    print("Min cost >>>" + str(min(costList)))
-    print("Max cost >>>" + str(max(costList)))
-    print("Average cost >>>" + str(mean(costList)))
-    print("Min time >>>" + str(min(timeRunList)))
-    print("Max time >>>" + str(max(timeRunList)))
-    print("Average time >>>" + str(mean(timeRunList)))
-    mu, std = norm.fit(costList)
-    print("Mean value>>" + str(mu))
-    print("Standard deviation >>" + str(std))
-    plt.figure(1)
-    plt.hist(costList, bins=int(mu))
-    plt.xlabel("Valoarea de cost [m]")
-    plt.ylabel("Numar aparitii")
-    plt.grid()
-    # plt.show()
-    
-    plt.figure(2)
-    plt.plot(costList, norm.pdf(costList,mu,std))
-    plt.xlabel("Valoarea de cost [m]")
-    plt.ylabel("Densitatea functiei de distibutie")
-    plt.grid()
-    plt.show()
 
 if __name__ == '__main__':
-    start_time = time.time()
     main()
