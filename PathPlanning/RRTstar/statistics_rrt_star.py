@@ -23,7 +23,7 @@ class RRT():
     """
     global start_time
     def __init__(self, start, goal, obstacleList, randArea,
-                 expandDis=1.0, goalSampleRate=5, maxIter=200):
+                 expandDis=1.0, goalSampleRate=5, maxIter=100):
         """
         Setting Parameter
 
@@ -50,8 +50,8 @@ class RRT():
         """
 
         self.nodeList = [self.start]
-        # for i in range(self.maxIter):
-        while(True):
+        for i in range(self.maxIter):
+        # while(True):
             rnd = self.get_random_point()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
@@ -67,23 +67,23 @@ class RRT():
             # if animation:
             #     self.DrawGraph(rnd)
 
-            # generate course
-            lastIndex = self.get_best_last_index()
-            if lastIndex is not None:
-                path = self.gen_final_course(lastIndex)
+        # generate course
+        lastIndex = self.get_best_last_index()
+        if lastIndex is not None:
+            path = self.gen_final_course(lastIndex)
 
-                timeRun = time.time() - start_time
-                cost = 0.0
-                # Compute path cost
-                for k in range(len(path)-1):
-                    dx = path[k+1][0] - path[k][0]
-                    dy = path[k+1][1] - path[k][1]
-                    d = math.sqrt(dx ** 2 + dy ** 2)
-                    cost = cost + d
+            timeRun = time.time() - start_time
+            cost = 0.0
+            # Compute path cost
+            for k in range(len(path)-1):
+                dx = path[k+1][0] - path[k][0]
+                dy = path[k+1][1] - path[k][1]
+                d = math.sqrt(dx ** 2 + dy ** 2)
+                cost = cost + d
 
-                print("--- %s seconds ---" % timeRun)
-                print (cost)
-                return path,timeRun,cost  
+            print("--- %s seconds ---" % timeRun)
+            print (cost)
+            return path,timeRun,cost  
 
 
     def choose_parent(self, newNode, nearinds):
@@ -270,9 +270,12 @@ def main():
 
     obstacleList = [
     (5, 5, 0),
+    (3, 6, 0),
+    (3, 8, 0),
     (3, 10, 0),
+    (7, 5, 0),
     (9, 5, 0)
-    ]  # [x,y,size]
+    ]  # [x,y,size(radius)]
 
     # Set Initial parameters
     rrt = RRT(start=[0, 0], goal=[5, 10],
@@ -280,12 +283,14 @@ def main():
 
     timeRunList = []
     costList = []         
-     # Run the algorithm 1000 times
-    for n in range(1000):     
-        path, timeRun, cost = rrt.Planning(animation=show_animation)
-        timeRunList.append(timeRun)
-        costList.append(cost)
-        start_time = time.time()
+     # Run the algorithm multiple times
+    algIterNumber = 1000
+    for n in range(algIterNumber): 
+        result  = rrt.Planning(animation=show_animation)    
+        if result is not None:
+            timeRunList.append(result[1])  # add run time to the list
+            costList.append(result[2])      # add cost value to the list
+            start_time = time.time()
 
         # Draw final path
         # if show_animation and path is not None:
@@ -294,7 +299,8 @@ def main():
         #     plt.grid(True)
         #     plt.show()
     
-    # Do stuff for analytics            
+    # Do stuff for analytics  
+    print("Fails >>>" + str(algIterNumber - len(costList)))          
     print("Cost list >>>" + str(costList))
     print("Time list >>>" + str(timeRunList))
     print("Min cost >>>" + str(min(costList)))
