@@ -1,37 +1,29 @@
 """
 Path Planning Sample Code with Randamized Rapidly-Exploring Random Trees (RRT)
-
 author: AtsushiSakai(@Atsushi_twi)
-
 """
 
 import matplotlib.pyplot as plt
 import random
 import math
 import copy
-import time
-from statistics import mean
-from scipy.stats import norm
 
 show_animation = True
-start_time = 0.0
 
 
 class RRT():
     """
     Class for RRT Planning
     """
-    global start_time
+
     def __init__(self, start, goal, obstacleList,
                  randArea, expandDis=1.0, goalSampleRate=5, maxIter=500):
         """
         Setting Parameter
-
         start:Start Position [x,y]
         goal:Goal Position [x,y]
         obstacleList:obstacle Positions [[x,y,size],...]
         randArea:Ramdom Samping Area [min,max]
-
         """
         self.start = Node(start[0], start[1])
         self.end = Node(goal[0], goal[1])
@@ -45,12 +37,11 @@ class RRT():
     def Planning(self, animation=True):
         """
         Pathplanning
-
         animation: flag for animation on or off
         """
+
         self.nodeList = [self.start]
-        for i in range(self.maxIter):
-        # while True:
+        while True:
             # Random Sampling
             if random.randint(0, 100) > self.goalSampleRate:
                 rnd = [random.uniform(self.minrand, self.maxrand), random.uniform(
@@ -83,51 +74,20 @@ class RRT():
             d = math.sqrt(dx * dx + dy * dy)
             if d <= self.expandDis:
                 print("Goal!!")
-                # break
-
-                # Compute path
-                path = [[self.end.x, self.end.y]]
-                lastIndex = len(self.nodeList) - 1
-                while self.nodeList[lastIndex].parent is not None:
-                    node = self.nodeList[lastIndex]
-                    path.append([node.x, node.y])
-                    lastIndex = node.parent
-                path.append([self.start.x, self.start.y])
-
-                # Compute path cost
-                cost = 0.0
-                for k in range(len(path)-1):
-                    dx = path[k+1][0] - path[k][0]
-                    dy = path[k+1][1] - path[k][1]
-                    d = math.sqrt(dx ** 2 + dy ** 2)
-                    cost = cost + d
-                    costList.append(cost)
-                # print("--- %s seconds ---" % (time.time() - start_time))
+                break
 
             if animation:
                 self.DrawGraph(rnd)
 
         path = [[self.end.x, self.end.y]]
         lastIndex = len(self.nodeList) - 1
-        cost = 0.0
-        timeRun = 0.0
         while self.nodeList[lastIndex].parent is not None:
             node = self.nodeList[lastIndex]
             path.append([node.x, node.y])
             lastIndex = node.parent
         path.append([self.start.x, self.start.y])
 
-        # Compute path cost
-        for k in range(len(path)-1):
-            dx = path[k+1][0] - path[k][0]
-            dy = path[k+1][1] - path[k][1]
-            d = math.sqrt(dx ** 2 + dy ** 2)
-            cost = cost + d
-        
-        timeRun = time.time() - start_time
-        print("--- %s seconds ---" % timeRun)
-        print (cost)
-        return path,timeRun,cost
+        return path
 
     def DrawGraph(self, rnd=None):
         """
@@ -147,8 +107,6 @@ class RRT():
         plt.plot(self.start.x, self.start.y, "xr")
         plt.plot(self.end.x, self.end.y, "xr")
         plt.axis([-2, 15, -2, 15])
-        plt.xlabel("x [m]")
-        plt.ylabel("y [m]")
         plt.grid(True)
         plt.pause(0.01)
 
@@ -168,26 +126,7 @@ class RRT():
                 return False  # collision
 
         return True  # safe
-    
-    def calc_dist_to_goal(self, x, y):
-        return np.linalg.norm([x - self.end.x, y - self.end.y])
-    
-    def get_best_last_index(self):
 
-        disglist = [self.calc_dist_to_goal(
-            node.x, node.y) for node in self.nodeList]
-        goalinds = [disglist.index(i) for i in disglist if i <= self.expandDis]
-        #  print(goalinds)
-
-        if len(goalinds) == 0:
-            return None
-
-        mincost = min([self.nodeList[i].cost for i in goalinds])
-        for i in goalinds:
-            if self.nodeList[i].cost == mincost:
-                return i
-
-        return None
 
 class Node():
     """
@@ -201,83 +140,29 @@ class Node():
 
 
 def main():
-    global start_time
     print("start simple RRT path planning")
 
     # ====Search Path with RRT====
-    # obstacleList = [
-    #     (5, 5, 1),
-    #     (3, 6, 2),
-    #     (3, 8, 2),
-    #     (3, 10, 2),
-    #     (7, 5, 2),
-    #     (9, 5, 2)
-    # ]  # [x,y,size(radius)]
-
-    # obstacleList = [
-    #     (5, 5, 2),
-    #     (3, 10, 2),
-    #     (9, 5, 1)
-    # ]  # [x,y,size]
-
     obstacleList = [
-    (5, 5, 0),
-    (3, 10, 0),
-    (9, 5, 0)
+        (5, 5, 1),
+        (3, 6, 2),
+        (3, 8, 2),
+        (3, 10, 2),
+        (7, 5, 2),
+        (9, 5, 2)
     ]  # [x,y,size]
-
     # Set Initial parameters
     rrt = RRT(start=[0, 0], goal=[5, 10],
               randArea=[-2, 15], obstacleList=obstacleList)
-    timeRunList = []
-    costList = []
-    # Run the algorithm 1000 times
-    for n in range(1):
-        path , timeRun, cost = rrt.Planning(animation=show_animation)
-        timeRunList.append(timeRun)
-        costList.append(cost)
-        start_time = time.time()
+    path = rrt.Planning(animation=show_animation)
 
-        # Draw final path
-        if show_animation:
-            rrt.DrawGraph()
-            plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
-            plt.grid(True)
-            plt.show()
-    # print("Cost list >>>" + str(costList))
-    # print("Time list >>>" + str(timeRunList))
-    # print("Min cost >>>" + str(min(costList)))
-    # print("Max cost >>>" + str(max(costList)))
-    # print("Average cost >>>" + str(mean(costList)))
-    # print("Min time >>>" + str(min(timeRunList)))
-    # print("Max time >>>" + str(max(timeRunList)))
-    # print("Average time >>>" + str(mean(timeRunList)))
-    # mu, std = norm.fit(costList)
-    # print("Mean value>>" + str(mu))
-    # print("Standard deviation >>" + str(std))
-    # plt.figure(1)
-    # plt.hist(costList, bins=int(mu))
-    # plt.xlabel("Valoarea de cost [m]")
-    # plt.ylabel("Numar aparitii")
-    # plt.grid()
-    # # plt.show()
-    
-    # plt.figure(2)
-    # plt.plot(costList, norm.pdf(costList,mu,std))
-    # plt.xlabel("Valoarea de cost [m]")
-    # plt.ylabel("Densitatea functiei de distibutie")
-    # plt.grid()
-    # plt.show()
-    # data_normal = norm.rvs(size=10000,loc=0,scale=1)
-    # print(data_normal)
-    # ax = sns.distplot(data_normal,
-    #               bins=100,
-    #               kde=True,
-    #               color='skyblue',
-    #               hist_kws={"linewidth": 15,'alpha':1})
-    # ax.set(xlabel='Normal Distribution', ylabel='Frequency')
+    # Draw final path
+    if show_animation:
+        rrt.DrawGraph()
+        plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
+        plt.grid(True)
+        plt.show()
 
 
 if __name__ == '__main__':
-    start_time = time.time()
     main()
