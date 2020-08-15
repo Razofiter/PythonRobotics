@@ -209,9 +209,14 @@ def main():
         ryaw.append(sp.calc_yaw(i_s))
         rk.append(sp.calc_curvature(i_s))
 
+    print(x[0])
     plt.subplots(1)
-    plt.plot(x, y, "xb", label="input")
-    plt.plot(rx, ry, "-r", label="spline")
+    plt.plot(x[0], y[0], "vb", label="punct de start")
+    plt.plot(x[6], y[6], "vb", label="punct de stop")
+    plt.plot([x[1], x[2], x[3], x[4], x[5]], [y[1], y[2], y[3], y[4], y[5]], "ob", label="punct de destinatie intermediare")
+
+    # plt.plot(rx, ry, "-r", label="spline")
+    plt.plot(rx, ry, "--r")
     plt.grid(True)
     plt.axis("equal")
     plt.xlabel("x[m]")
@@ -219,18 +224,20 @@ def main():
     plt.legend()
 
     plt.subplots(1)
-    plt.plot(s, [np.rad2deg(iyaw) for iyaw in ryaw], "-r", label="yaw")
+    plt.plot(s, [np.rad2deg(iyaw) for iyaw in ryaw], "-r")
+    # plt.plot(s, [np.rad2deg(iyaw) for iyaw in ryaw], "-r", label="unghi de cap")
     plt.grid(True)
     plt.legend()
-    plt.xlabel("line length[m]")
-    plt.ylabel("yaw angle[deg]")
+    plt.xlabel("lungimea curbei [m]")
+    plt.ylabel("unghi de cap [grade]")
 
     plt.subplots(1)
-    plt.plot(s, rk, "-r", label="curvature")
+    plt.plot(s, rk, "-r")
+    # plt.plot(s, rk, "-r", label="curbura")
     plt.grid(True)
     plt.legend()
-    plt.xlabel("line length[m]")
-    plt.ylabel("curvature [1/m]")
+    plt.xlabel("lungimea curbei [m]")
+    plt.ylabel("curbura [1/m]")
 
     plt.show()
 
