@@ -9,38 +9,44 @@ import matplotlib.pyplot as plt
 show_animation = True
 
 # Pentru moment nu folosim cele 2 variabile de mai jos. Sunt doar cu titlu informativ asupra modului in care a fost realizat pilotul automat pentru quad
-CONTROLLER_INNER_LOOP_REFRESH_RATE = 0.004 # [250Hz]
-ALT_HOLD_CONTROLLER_REFRESH_RATE = 0.2 #[50Hz]
+CONTROLLER_INNER_LOOP_REFRESH_RATE = 0.004 # [s]
+CONTROLLER_OUTER_LOOP_REFRESH_RATE = 0.8 #[s]
 
 class InformedRRTStar():
 
     def __init__(self, start, goal,
                  obstacleList, randArea,
-                 expandDis=0.5, goalSampleRate=-1, maxIter=150):
+                 expandDis=0.5, goalSampleRate=5, maxIter=200):
 
         self.start = Node(start[0], start[1])
         self.goal = Node(goal[0], goal[1])
         self.minrand = randArea[0]
         self.maxrand = randArea[1]
-        #self.maxrandY = randArea[2]
         self.expandDis = expandDis
         self.goalSampleRate = goalSampleRate
         self.maxIter = maxIter
         self.obstacleList = obstacleList
         # Time step iteration
-        self.h = 0.2
+        self.h = CONTROLLER_OUTER_LOOP_REFRESH_RATE
+
         # Calculam care este raza minima a obstacolelor existente
-        obstacleMinRadius = min([min(tpl) for tpl in obstacleList])
+        obstacleMinRadius = min([min(tpl) for tpl in obstacleList])/2
+        print("Raza minima: %f" % obstacleMinRadius)
         
         '''Vehicle related limits'''
         # Acum determinam viteza maxima cunoscand timpul de iteratie si distanta minimima pe care permitem ca UAV-ul sa o parcurga (raportata la raza minima a obiectelor existente pe harta)
         self.velMax = obstacleMinRadius/self.h
-        # Determinam acceleratia maxima
-        self.accMax = self.velMax/self.h
+        print("Viteza maxima: %f" % self.velMax)
+        # Impunem acceleratia de translatie maxima, raportat la dinx`amica UAVului
+        self.accMax = 2   # m/s^2
+        #self.accMax = (2*obstacleMinRadius)/self.h**2
+        print("Acceleratia maxima: %f" % self.accMax)
         # Calculam distanta pe care o poate parcurge UAV-ul, functie de viteza maxima si de viteza de refresh a algoritmului controlerului care se ocupa cu functia de ALT_HOLD
-        self.safeDist = self.velMax*self.h
+        #self.safeDist = self.velMax*self.h
         # In final, calculam distanta (euclidiana) minima fata de obstacolele existente, la care putem esantiona puncte pentru a calcula un traseu apriori
-        self.minDist = self.safeDist
+        self.minDist = obstacleMinRadius
+        self.expandDis = obstacleMinRadius
+        print("Distanta de siguranta: %f" % self.minDist)
 
     def InformedRRTStarSearch(self, animation=True):
 
@@ -100,9 +106,14 @@ class InformedRRTStar():
                         path = tempPath
                         cBest = tempPathLen
                         print(cBest)
-
-            if animation:
-                GraphRepresentation.drawGraph(self,xCenter=xCenter,
+                        # Reconsideram acceleratia de translatie maxima, raportat la lungimea traiectoriei
+                        # self.temp_accMax = (2*cBest)/self.h**2
+                        # self.accMax = min(self.accMax,self.temp_accMax)   # m/s^2
+                        # print("New acc: %2.2f" % self.accMax)
+            # Plot the last step of iteration
+            if animation and i == self.maxIter-1:
+            #if animation:
+                self.drawGraph(xCenter=xCenter,
                                cBest=cBest, cMin=cMin,
                                etheta=etheta, rnd=rnd)
 
@@ -260,10 +271,30 @@ class InformedRRTStar():
             lastIndex = node.parent
         path.append([self.start.x, self.start.y])
         return path
+
+    def GenerateWaypointTime(self, path):
+                
+        waypointPathTime = []
+        #print(path)
+        for i in range(len(path)-1,0,-1):
+            node1_x = path[i][0]
+            node1_y = path[i][1]
+            node2_x = path[i - 1][0]
+            node2_y = path[i - 1][1]
+            pathLen = math.sqrt((node1_x - node2_x)
+                                 ** 2 + (node1_y - node2_y)**2)
+            # Compute segment time based on the current self.accMax and pathLen
+            segtime = math.sqrt((2*pathLen)/self.accMax)
+            waypointPathTime.append(segtime)
+
+        return waypointPathTime
         
     def GenerateWaypoint(self, path):
         pathLen = 0
         
+        # Compute mini segment length based on the current self.accMax
+        expand = (self.accMax*self.h**2)/2
+        expand = self.minDist
         waypointPath = []
         for i in range(len(path)-1,0,-1):
             node1_x = path[i][0]
@@ -275,11 +306,12 @@ class InformedRRTStar():
             theta = math.atan2(node2_y-node1_y, node2_x-node1_x)
             waypointPath.append([node1_x,node1_y])
             temp_n = copy.deepcopy(path[i])
-            while(pathLen > self.minDist):
-                temp_n[0] += self.minDist* math.cos(theta)
-                temp_n[1] += self.minDist* math.sin(theta)
+
+            while(pathLen > expand):
+                temp_n[0] += expand * math.cos(theta)
+                temp_n[1] += expand * math.sin(theta)
                 waypointPath.append([temp_n[0],temp_n[1]])
-                pathLen = pathLen - self.minDist
+                pathLen = pathLen - expand
             waypointPath.append([node2_x,node2_y])
 
         return waypointPath
@@ -295,16 +327,16 @@ class InformedRRTStar():
 
         # Number of iterations
         K = len(waypoints[0])
-        print(K)
+        print("Numar iteratii: %d" % K)
         
         # Total time
         T = self.h*K
-        print(T)
+        print("Timp de executie: %f" % T)
 
         Ldt = []
         for l in range(K+1):
             Ldt.append(l*self.h)
-        print(Ldt)
+        #print(Ldt)
 
         # Kinematics of a point mass
         A = np.matrix([[1,0,self.h,0],[0,1,0,self.h],[0,0,1,0],[0,0,0,1]])
@@ -313,9 +345,9 @@ class InformedRRTStar():
 
         # Start state
         x_0 = np.array([self.start.x,self.start.y,0,0])
+        x_f = np.array([self.goal.x,self.goal.y,0,0])
 
         # Form and solve control problem.
-
         x = cp.Variable((n, K+1))
         u = cp.Variable((m, K))
 
@@ -325,28 +357,29 @@ class InformedRRTStar():
             cost += cp.sum_squares(u[:,t])
 
             constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
-                       cp.norm(wp[:,t] - x[:2,t][:,None],'inf') <= self.minDist,
-                       cp.norm(u[:,t], 'inf') <= self.accMax,
-                       cp.norm(x[2:,t], 'inf') <= self.velMax]
+                       cp.norm(wp[:,t] - x[:2,t][:,None],2) <= self.minDist,
+                       cp.norm(u[:,t], 2) <= self.accMax,
+                       cp.norm(x[2:,t], 2) <= self.velMax]
         # sums problem objectives and concatenates constraints with the initial and final states.
-        constr += [x[:,K] == np.array([self.goal.x,self.goal.y,1,1]), x[:,0] == x_0]
+        constr += [x[:,K] == x_f, x[:,0] == x_0]
 
-        # Time taken until this point
-        #end = time.time()
-        #print('Problem formulation:',end - start)
         problem = cp.Problem(cp.Minimize(cost), constr)
-        problem.solve(verbose = False)
-        if problem.status not in ["infeasible", "unbounded"]:
-        # Otherwise, problem.value is inf or -inf, respectively.
-            print("Optimal value: %s" % problem.value)
-        for variable in problem.variables():
-            print("Variable %s: value %s" % (variable.name(), variable.value))
+        problem.solve(verbose = True)
+        # Time taken until this point
+        end_time = time.time()
+        print("Exec time: %fs" % (end_time-start_time))
+
+        # if problem.status not in ["infeasible", "unbounded"]:
+        # # Otherwise, problem.value is inf or -inf, respectively.
+        #     print("Optimal value: %s" % problem.value)
+        # for variable in problem.variables():
+        #     print("Variable %s: value %s" % (variable.name(), variable.value))
 
         plt.figure(2)
         # Plot (x_t)_3.
         plt.subplot(2,2,1)
         x3 = (x[2,:].value).tolist()
-        print(x3)
+        #print(x3)
         plt.plot(Ldt,x3)
         #plt.axis([-self.velMax, T, -self.velMax, self.velMax])
         plt.ylabel(r"$v_x[m/s]$", fontsize=16)
@@ -401,21 +434,126 @@ class InformedRRTStar():
         # Returnam matricea cu starile pentru a extrage din aceasta pozitia (x,y), in vederea reprezentarii grafice
         return stateMat
 
-class GraphRepresentation():
-#    def __init__(self):
-#        print('init')
-#        self.xCenter = xCenter
-#        self.cBest = cBest
-#        self.cMin = cMin
-#        self.etheta = etheta
+    def OptimizeTimeTraj(self, traj_time):
+
+        # Number of states: position and velocity on x and y directions
+        n = 4
+        # Number of inputs: thrust on x and y directions
+        m = 2
+
+        # Number of iterations
+        K = int(math.ceil(traj_time/self.h))
+        print("Numar iteratii: %d" % K)
         
+        # Total time
+        print("Timp de executie: %f" % traj_time)
+
+        Ldt = []
+        for l in range(K+1):
+            Ldt.append(l*self.h)
+        #print(Ldt)
+
+        # Kinematics of a point mass
+        A = np.matrix([[1,0,self.h,0],[0,1,0,self.h],[0,0,1,0],[0,0,0,1]])
+
+        B = np.matrix([[(self.h**2)/2,0],[0,(self.h**2)/2],[self.h,0],[0,self.h]])
+
+        # Start state
+        x_0 = np.array([self.start.x,self.start.y,0,0])
+
+        # Form and solve control problem.
+        x = cp.Variable((n, K+1))
+        u = cp.Variable((m, K))
+
+        cost = 0
+        constr = []
+        for t in range(0,K):
+            cost += cp.sum_squares(u[:,t])
+
+            constr += [x[:,t+1] == A@x[:,t] + B@u[:,t],
+                       cp.norm(wp[:,t] - x[:2,t][:,None],2) <= self.minDist,
+                       cp.norm(u[:,t], 2) <= self.accMax,
+                       cp.norm(x[2:,t], 2) <= self.velMax]
+        # sums problem objectives and concatenates constraints with the initial and final states.
+        constr += [x[:,K] == np.array([self.goal.x,self.goal.y,0,0]), x[:,0] == x_0]
+
+        problem = cp.Problem(cp.Minimize(cost), constr)
+        problem.solve(verbose = True)
+        # Time taken until this point
+        end_time = time.time()
+        print("Exec time: %fs" % (end_time-start_time))
+        # if problem.status not in ["infeasible", "unbounded"]:
+        # # Otherwise, problem.value is inf or -inf, respectively.
+        #     print("Optimal value: %s" % problem.value)
+        # for variable in problem.variables():
+        #     print("Variable %s: value %s" % (variable.name(), variable.value))
+
+        plt.figure(2)
+        # Plot (x_t)_3.
+        plt.subplot(2,2,1)
+        x3 = (x[2,:].value).tolist()
+        #print(x3)
+        plt.plot(Ldt,x3)
+        #plt.axis([-self.velMax, T, -self.velMax, self.velMax])
+        plt.ylabel(r"$v_x[m/s]$", fontsize=16)
+        plt.ylim([-self.velMax, self.velMax])
+        #plt.xticks([])
+        plt.xlabel(r"$t[s]$", fontsize=16)
+        plt.xlim([0, traj_time])
+        plt.grid(True)
+
+        # Plot (x_t)_4.
+        plt.subplot(2,2,2)
+        x4 = x[3,:].value
+        #print(x4)
+        plt.plot(range(K+1), x4)
+        plt.ylabel(r"$v_y[m/s]$", fontsize=16)
+        plt.ylim([-self.velMax, self.velMax])
+        #plt.xticks([])
+        plt.xlabel(r"$t[s]$", fontsize=16)
+        plt.xlim([0, traj_time])
+        
+        plt.grid(True)
+
+        # Plot (u_t)_1.
+        plt.subplot(2,2,3)
+        plt.plot(u[0,:].value)
+        plt.ylabel(r"$a_x[m/(s*s)]$", fontsize=16)
+        plt.ylim([-self.accMax, self.accMax])
+        #plt.yticks(np.linspace(-1, 1, 3))
+        #plt.xticks([])
+        plt.xlabel(r"$t[s]$", fontsize=16)
+        plt.xlim([0, traj_time])
+        plt.tight_layout()
+        plt.grid(True)
+
+        # Plot (u_t)_2.
+        plt.subplot(2,2,4)
+        plt.plot(u[1,:].value)
+        plt.ylabel(r"$a_y[m/(s*s)]$", fontsize=16)
+        plt.ylim([-self.accMax, self.accMax])
+        #plt.yticks(np.linspace(-1, 1, 3))
+        #plt.xticks([])
+        plt.xlabel(r"$t[s]$", fontsize=16)
+        plt.xlim([0, traj_time])
+        plt.tight_layout()
+        plt.grid(True)
+
+        stateMat = np.matrix([x[0,:].value,x[1,:].value,x[2,:].value,x[3,:].value])
+        ctrlMat = np.matrix([u[0,:].value,u[1,:].value])
+
+        #print(ctrlMat)
+        #print(x)
+        # Returnam matricea cu starile pentru a extrage din aceasta pozitia (x,y), in vederea reprezentarii grafice
+        return stateMat
+
     def drawGraph(self, xCenter=None, cBest=None, cMin=None, etheta=None, rnd=None):
         plt.figure(1)
         plt.clf()
         if rnd is not None:
             plt.plot(rnd[0], rnd[1], "^k")
             if cBest != float('inf'):
-                GraphRepresentation.plot_ellipse(xCenter, cBest, cMin, etheta)
+                self.plot_ellipse(xCenter, cBest, cMin, etheta)
 
         for node in self.nodeList:
             if node.parent is not None:
@@ -424,17 +562,20 @@ class GraphRepresentation():
                         node.y, self.nodeList[node.parent].y], "-g")
 
         for (ox, oy, size) in self.obstacleList:
-            plt.plot(ox, oy, "oc", ms=30 * size)
+            #plt.plot(ox, oy, "oc", ms=30 * size)
+            circle = plt.Circle((ox,oy),size/2, color='c')
+            plt.gca().add_patch(circle)
 
-        plt.plot(self.start.x, self.start.y, "xr")
-        plt.plot(self.goal.x, self.goal.y, "xr")
-        plt.axis([0, 15, 0, 15])
+        plt.plot(self.start.x, self.start.y, "^r",ms=5 * size)
+        plt.plot(self.goal.x, self.goal.y, "^r",ms=5 * size)
+        plt.axis('scaled')
+        plt.axis([self.minrand, self.maxrand, self.minrand, self.maxrand])
         plt.xlabel(r"$x[m]$", fontsize=16)
         plt.ylabel(r"$y[m]$", fontsize=16)  
         plt.grid(True)
-        plt.pause(0.01)
+        #plt.pause(0.01)
 
-    def plot_ellipse(xCenter, cBest, cMin, etheta):
+    def plot_ellipse(self,xCenter, cBest, cMin, etheta):
         plt.figure(1)
         a = math.sqrt(cBest**2 - cMin**2) / 2.0
         b = cBest / 2.0
@@ -466,14 +607,32 @@ def main():
     print("Start informed rrt star planning")
 
     # create obstacles
+    # obstacleList = [
+    #     (5, 5, 0.5),
+    #     (9, 6, 1),
+    #     (7, 5, 1),
+    #     (2, 2, 1),
+    #     (3, 6, 1),
+    #     (7, 9, 1)
+    # ]
+
+    # obstacleList = [
+    # (5, 5, 0),
+    # (3, 6, 0),
+    # (3, 8, 0),
+    # (3, 10, 0),
+    # (7, 5, 0),
+    # (9, 5, 0)
+    # ]  # [x,y,size(radius)]
+
     obstacleList = [
-        (5, 5, 0.5),
-        (9, 6, 1),
-        (7, 5, 1),
-        (2, 2, 1),
-        (3, 6, 1),
-        (7, 9, 1)
-    ]
+        (5, 5, 2),
+        (3, 6, 2),
+        (3, 8, 2),
+        (3, 10, 2),
+        (7, 5, 2),
+        (9, 5, 2)
+    ]  # [x,y,size(radius)]
 
     # Set params
     '''rrt = InformedRRTStar(start=[0, 0], goal=[3, 0],
@@ -490,12 +649,18 @@ def main():
     #print(waypointMatrix)
     optimizedPath = rrt.OptimizeTraj(waypointMatrix)'''
     
-    rrt = InformedRRTStar(start=[0, 1], goal=[6, 2],
-                          randArea=[0, 15], obstacleList=obstacleList)
+    rrt = InformedRRTStar(start=[0, 0], goal=[5, 10],
+                          randArea=[-2, 15], obstacleList=obstacleList)
     path = rrt.InformedRRTStarSearch(animation=show_animation)
     while path is None:
         path = rrt.InformedRRTStarSearch(animation=show_animation)
     print(path)
+
+    ''' Optimize traj based on current TIME trajectory '''
+    #traj_time = rrt.GenerateWaypointTime(path)
+    #optimizedPathTime = rrt.OptimizeTimeTraj(sum(traj_time))
+
+    ''' Optimize traj based on current WP trajectory '''
     waypointPath = rrt.GenerateWaypoint(path)
     #print([x for (x, y) in waypointPath], [y for (x, y) in waypointPath])
     waypointXaxis = [x for (x, y) in waypointPath]
@@ -505,25 +670,27 @@ def main():
     #print(waypointMatrix)
     optimizedPath = rrt.OptimizeTraj(waypointMatrix)
     #print(optimizedPath[0,],optimizedPath[1,])
-    print(optimizedPath)
+    #print(optimizedPath)
     #print(waypointPath)
-    #graph = GraphRepresentation()
+
 
     # Plot path
     if show_animation:
         plt.figure(1)
-        #GraphRepresentation.drawGraph(self)
+        #rrt.draw_graph()
         # Reprezentam grafic punctele determinate folosind metoda IRRT*
         plt.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
         # Reprezentam grafic punctele GPS determinate, functie de constrangerile generate de scenariul de zbor
         plt.plot([x for (x, y) in waypointPath], [y for (x, y) in waypointPath], 'Hb')
+
         # Reprezentam grafic punctele GPS obtinute dupa aplicarea algoritmului de optimizare a traciectoriei
         plt.plot(optimizedPath[0,], optimizedPath[1,], '*y')
+        #plt.plot(optimizedPathTime[0,], optimizedPathTime[1,], '*y')
         plt.xlabel(r"$x[m]$", fontsize=16)
         plt.ylabel(r"$y[m]$", fontsize=16)
         plt.grid(True)
-        plt.pause(0.01)
         plt.show()
 
 if __name__ == '__main__':
+    start_time = time.time()
     main()
