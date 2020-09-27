@@ -1,5 +1,3 @@
-# Functia cost reprezinta suma acceleratiilor patratice, iar matricile si vectorii de mai jos se formeaza pe baza problemei de control
-# Vezi: https://nbviewer.jupyter.org/github/cvxgrp/cvx_short_course/blob/master/intro/control.ipynb
 import time
 start = time.time()
 
